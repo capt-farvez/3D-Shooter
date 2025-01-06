@@ -5,6 +5,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "stb/stb_image.h"
+
 #include "shader.h"
 #include "camera.h"
 #include "pointLight.h"
@@ -21,6 +23,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void drawCube(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 model, float r, float g, float b);
+void drawCubeTexture(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 model, GLuint texture, float r, float g, float b);
 void drawTriangle(unsigned int& triangleVAO, Shader& lightingShader, glm::mat4 model, float r, float g, float b);
 void bed(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 alTogether);
 
@@ -200,35 +203,35 @@ int main()
 
     float cube_vertices[] = {
         // positions      // normals
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
-        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
-        1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f,
-        0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, //0
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, //1
+        1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, //2 
+        0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, //3 
 
-        1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, //4
+        1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, //5
+        1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, //6
+        1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, //7
 
-        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, //8
+        1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, //9
+        1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, //10
+        0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // 11
 
-        0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, //12
+        0.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, //13
+        0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, //14
+        0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, //15
 
-        1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+        1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, //16
+        1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, //17
+        0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, //18
+        0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, //19
 
-        0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,
-        1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,
-        1.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f
+        0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //20
+        1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //21
+        1.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //22
+        0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //23
     };
     unsigned int cube_indices[] = {
         0, 3, 2,
@@ -265,12 +268,38 @@ int main()
 
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     // vertex normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)12);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)12);
     glEnableVertexAttribArray(1);
+
+    // Texture coordinate attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)24);
+    glEnableVertexAttribArray(2);
+
+    // Load and create a texture
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // Set texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // Set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Load image, create texture, and generate mipmaps
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load("res_wall_01_color.jpg", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cerr << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
 
 
 
@@ -290,11 +319,11 @@ int main()
 
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     // vertex normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)12);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)12);
     glEnableVertexAttribArray(1);
 
 
@@ -444,70 +473,70 @@ int main()
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.7f, 0.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.7f, 0.0f, 1.0f);
 
         // Building 2
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, -0.0f, 0.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.2f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 0.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 0.0f, 1.0f);
 
         // Building 3
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 1.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.0f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
 
         // Building 4
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 2.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 0.0f, 1.0f);
 
         // Building 5
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 3.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.0f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.0f, 0.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 0.0f);
 
         // Building 6
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 4.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 0.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 0.0f, 1.0f);
 
         // Building 7
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 5.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.2f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.7f, 0.7f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.7f, 0.7f);
 
         // Building 8
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 6.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
 
         // Building 9
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 7.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.6f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.2f, 0.7f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.2f, 0.7f);
 
         // Building 10
         translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 8.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.1f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.4f, 1.3f, 1.8f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.4f, 1.3f, 1.8f);
 
 
         // Building 11
@@ -515,7 +544,7 @@ int main()
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.8f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.6f, 1.9f, 0.5f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.6f, 1.9f, 0.5f);
 
         //   ------------------------------------- Buildings in Left side of Road -----------------------------------------------
         // Building 1
@@ -523,77 +552,77 @@ int main()
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.6f, 1.9f, 0.5f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.6f, 1.9f, 0.5f);
 
         // Building 2
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 0.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.7f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.2f, 0.7f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.2f, 0.7f);
 
         // Building 3
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 1.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.7f, 0.7f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.7f, 0.7f);
 
         // Building 4
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 2.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 1.9f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.4f, 1.3f, 1.8f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.4f, 1.3f, 1.8f);
 
         // Building 5
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 3.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
 
         // Building 6
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 4.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 0.0f, 1.0f);
 
         // Building 7
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 5.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
 
         // Building 8
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 6.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
 
         // Building 9
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 7.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
 
         // Building 10
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 8.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.5f, 0.8f, 1.9f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.5f, 0.8f, 1.9f);
 
         // Building 11
         translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 9.5f));
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.8f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
 
         // ---------------------------------------- KIller Hasina -----------------------
         // 1. Head
@@ -688,9 +717,27 @@ void drawCube(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 model = g
     lightingShader.setVec3("material.diffuse", glm::vec3(r, g, b));
     lightingShader.setVec3("material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
     lightingShader.setFloat("material.shininess", 32.0f);
+    lightingShader.setBool("useTexture", false);
 
     lightingShader.setMat4("model", model);
 
+    glBindVertexArray(cubeVAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+}
+
+void drawCubeTexture(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 model = glm::mat4(1.0f), GLuint texture = (GLuint)0, float r = 1.0f, float g = 1.0f, float b = 1.0f)
+{
+    lightingShader.use();
+
+    lightingShader.setVec3("material.ambient", glm::vec3(r, g, b));
+    lightingShader.setVec3("material.diffuse", glm::vec3(r, g, b));
+    lightingShader.setVec3("material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
+    lightingShader.setFloat("material.shininess", 32.0f);
+    lightingShader.setBool("useTexture", true);
+
+    lightingShader.setMat4("model", model);
+
+    glBindTexture(GL_TEXTURE_2D, texture);
     glBindVertexArray(cubeVAO);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 }
