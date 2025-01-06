@@ -1,3 +1,10 @@
+.vs/
+Lab9_Lighting/
+x64/
+
+*.filters
+*.user
+
 # Prerequisites
 *.d
 
