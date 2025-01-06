@@ -57,10 +57,12 @@ DirectionalLight directionalLight(-directionalLight_direction, glm::vec4(0.2f, 0
 
 // positions of the point lights
 glm::vec3 pointLightPositions[] = {
-    glm::vec3(-1.0f,  1.50f,  12.0f),  //ai 4ta light
-    glm::vec3(1.5f,  -1.5f,  0.0f),
-    glm::vec3(-1.5f,  1.5f,  0.0f),
-    glm::vec3(-1.5f,  -1.5f,  0.0f)
+    glm::vec3(-1.0f,  2.0f,  12.0f),  // Left Front light
+    glm::vec3(2.5f,  2.0f,  12.0f),   // Right Front Light   
+    glm::vec3(-1.5f,  3.0f,  0.0f),   // Left Back Light
+    glm::vec3(2.5f,  3.0f,  0.0f),    // Right Back Light
+    glm::vec3(-0.5f,  3.0f,  6.0f),   // Left Middle Light
+    glm::vec3(1.5f,  3.0f,  6.0f)     // Right Middle Light
 };
 
 PointLight pointlight1(
@@ -97,6 +99,29 @@ PointLight pointlight3(
     3       // light number
 );
 PointLight pointlight4(
+
+    pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z,  // position
+    0.05f, 0.05f, 0.05f,     // ambient
+    0.8f, 0.8f, 0.8f,     // diffuse
+    1.0f, 1.0f, 1.0f,        // specular
+    1.0f,   //k_c
+    0.09f,  //k_l
+    0.032f, //k_q
+    4       // light number
+);
+
+PointLight pointlight5(
+
+    pointLightPositions[2].x, pointLightPositions[2].y, pointLightPositions[2].z,  // position
+    0.05f, 0.05f, 0.05f,     // ambient
+    0.8f, 0.8f, 0.8f,     // diffuse
+    1.0f, 1.0f, 1.0f,        // specular
+    1.0f,   //k_c
+    0.09f,  //k_l
+    0.032f, //k_q
+    3       // light number
+);
+PointLight pointlight6(
 
     pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z,  // position
     0.05f, 0.05f, 0.05f,     // ambient
@@ -357,6 +382,8 @@ int main()
         pointlight2.setUpPointLight(lightingShader);
         pointlight3.setUpPointLight(lightingShader);
         pointlight4.setUpPointLight(lightingShader);
+        pointlight5.setUpPointLight(lightingShader);
+        pointlight6.setUpPointLight(lightingShader);
 
         directionalLight.setUpLight(lightingShader);
 
@@ -631,7 +658,7 @@ int main()
         ourShader.setMat4("view", view);
         // we now draw as many light bulbs as we have point lights.
         glBindVertexArray(lightCubeVAO);
-        for (unsigned int i = 0; i < 4; i++)
+        for (unsigned int i = 0; i < 6; i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, pointLightPositions[i]);
@@ -735,6 +762,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnOff();
             pointlight3.turnOff();
             pointlight4.turnOff();
+            pointlight5.turnOff();
+            pointlight6.turnOff();
             pointLightOn = !pointLightOn;
         }
         else
@@ -743,6 +772,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnOn();
             pointlight3.turnOn();
             pointlight4.turnOn();
+            pointlight5.turnOn();
+            pointlight6.turnOn();
             pointLightOn = !pointLightOn;
         }
     }
@@ -757,6 +788,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnSpecularOff();
             pointlight3.turnSpecularOff();
             pointlight4.turnSpecularOff();
+            pointlight5.turnSpecularOff();
+            pointlight6.turnSpecularOff();
 
             specularToggle = !specularToggle;
         }
@@ -767,6 +800,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnSpecularOn();
             pointlight3.turnSpecularOn();
             pointlight4.turnSpecularOn();
+            pointlight5.turnSpecularOn();
+            pointlight6.turnSpecularOn();
             specularToggle = !specularToggle;
         }
     }
@@ -780,6 +815,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnDiffuseOff();
             pointlight3.turnDiffuseOff();
             pointlight4.turnDiffuseOff();
+            pointlight5.turnDiffuseOff();
+            pointlight6.turnDiffuseOff();
             diffuseToggle = !diffuseToggle;
         }
         else
@@ -789,6 +826,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnDiffuseOn();
             pointlight3.turnDiffuseOn();
             pointlight4.turnDiffuseOn();
+            pointlight5.turnDiffuseOn();
+            pointlight6.turnDiffuseOn();
             diffuseToggle = !diffuseToggle;
         }
     }
@@ -802,6 +841,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnAmbientOff();
             pointlight3.turnAmbientOff();
             pointlight4.turnAmbientOff();
+            pointlight5.turnAmbientOff();
+            pointlight6.turnAmbientOff();
             ambientToggle = !ambientToggle;
         }
         else
@@ -811,6 +852,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             pointlight2.turnAmbientOn();
             pointlight3.turnAmbientOn();
             pointlight4.turnAmbientOn();
+            pointlight5.turnAmbientOn();
+            pointlight6.turnAmbientOn();
             ambientToggle = !ambientToggle;
         }
     }
