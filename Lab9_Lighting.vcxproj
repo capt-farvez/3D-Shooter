@@ -112,7 +112,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;irrKlang.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -140,6 +140,15 @@
   <ItemGroup>
     <None Include="fragmentShader.fs" />
     <None Include="fragmentShaderForPhongShading.fs" />
+    <CopyFileToFolders Include="opengl\bin\ikpFlac.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="opengl\bin\ikpMP3.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="opengl\bin\irrKlang.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="vertexShader.vs" />
     <None Include="vertexShaderForPhongShading.vs" />
   </ItemGroup>

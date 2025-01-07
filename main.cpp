@@ -5,6 +5,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <irrklang/irrKlang.h>
+
 #include "stb/stb_image.h"
 
 #include "shader.h"
@@ -16,6 +18,9 @@
 #include <iostream>
 
 using namespace std;
+using namespace irrklang;
+
+ISoundEngine* SoundEngine = createIrrKlangDevice();
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -233,6 +238,40 @@ int main()
         1.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //22
         0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //23
     };
+
+    float road_vertices[] = {
+        // positions      // normals
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, //0
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, //1
+        1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, //2 
+        0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, //3 
+
+        1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, //4
+        1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, //5
+        1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, //6
+        1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, //7
+
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, //8
+        1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, //9
+        1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, //10
+        0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // 11
+
+        0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, //12
+        0.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, //13
+        0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, //14
+        0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, //15
+
+        1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, //16
+        1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, //17
+        0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, //18
+        0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, //19
+
+        0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //20
+        1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //21
+        1.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //22
+        0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, //23
+    };
+
     unsigned int cube_indices[] = {
         0, 3, 2,
         2, 1, 0,
@@ -301,6 +340,75 @@ int main()
     }
     stbi_image_free(data);
 
+
+    // Road Buffer Arrays
+    unsigned int roadVAO, roadVBO, roadEBO;
+    glGenVertexArrays(1, &roadVAO);
+    glGenBuffers(1, &roadVBO);
+    glGenBuffers(1, &roadEBO);
+
+    glBindVertexArray(roadVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, roadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(road_vertices), road_vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, roadEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_indices), cube_indices, GL_STATIC_DRAW);
+
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // vertex normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)12);
+    glEnableVertexAttribArray(1);
+
+    // Texture coordinate attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)24);
+    glEnableVertexAttribArray(2);
+
+    GLuint road_texture;
+    glGenTextures(1, &road_texture);
+    glBindTexture(GL_TEXTURE_2D, road_texture);
+    // Set texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // Set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Load image, create texture, and generate mipmaps
+    //int width, height, nrChannels;
+    data = stbi_load("road.jpeg", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cerr << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+
+    GLuint hasina_texture;
+    glGenTextures(1, &hasina_texture);
+    glBindTexture(GL_TEXTURE_2D, hasina_texture);
+    // Set texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // Set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Load image, create texture, and generate mipmaps
+    //int width, height, nrChannels;
+    data = stbi_load("hasina.jpeg", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cerr << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
 
 
     // second, configure the light's VAO ------------------------------------ Light Cube
@@ -388,6 +496,9 @@ int main()
     //ourShader.use();
     //lightingShader.use();
 
+    // Killer Hasina Song!
+    ISound *killerSong = SoundEngine->play2D("killer_hasina.mp3", true);
+    //killerSong->setIsPaused(true);
 
     float xTranslation = 0.0f;
     float yTranslation = 0.0f;
@@ -474,7 +585,7 @@ int main()
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(3.0f, 0.2f, 12.0f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.5f, 0.5f, 0.5f);
+        drawCubeTexture(roadVAO, lightingShader, model, road_texture, 0.5f, 0.5f, 0.5f);
 
         // -------------------------------------- Buildings in Right side of road   ---------------------------------------------
         // Building 1
@@ -676,7 +787,7 @@ int main()
         scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
         model = translateMatrix * scaleMatrix;
         //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
+        drawCubeTexture(cubeVAO, lightingShader, model, hasina_texture, 1.0f, 0.0f, 0.0f);
 
         // 2. Neck
         translateMatrix = glm::translate(identityMatrix, glm::vec3(0.875f + xTranslation, 0.8f + yTranslation, 0.5f + zTranslation));
