@@ -17,15 +17,14 @@ This project is a real-time 3D simulation created with OpenGL, GLFW, and Glad us
 ---
 
 ## Technologies Used
-- **Libraries**: GLFW, Glad, OpenGL
+- **Libraries**: GLFW, Glad, OpenGL, STB Image, irrKlang Sound Library
 - **Language**: C++
-- **Development Tools**: Visual Studio Code 2022, CMake
+- **Development Tools**: Visual Studio Code 2022
 
 ---
 
 ## Prerequisites
 Ensure you have the following installed:
-- [CMake](https://cmake.org/download/)
 - [Visual Studio Code](https://code.visualstudio.com/) with C++ extensions.
 - [GLFW](https://www.glfw.org/) library.
 - [Glad](https://glad.dav1d.de/) loader.
