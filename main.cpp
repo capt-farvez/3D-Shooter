@@ -5,6 +5,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <irrklang/irrKlang.h>
+
 #include "stb/stb_image.h"
 
 #include "shader.h"
@@ -16,6 +18,9 @@
 #include <iostream>
 
 using namespace std;
+using namespace irrklang;
+
+ISoundEngine* SoundEngine = createIrrKlangDevice();
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -24,7 +29,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void drawCube(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 model, float r, float g, float b);
 void drawCubeTexture(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 model, GLuint texture, float r, float g, float b);
-void drawRoad(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 model, GLuint texture, float r, float g, float b);
 void drawTriangle(unsigned int& triangleVAO, Shader& lightingShader, glm::mat4 model, float r, float g, float b);
 void bed(unsigned int& cubeVAO, Shader& lightingShader, glm::mat4 alTogether);
 
@@ -491,6 +495,10 @@ int main()
 
     //ourShader.use();
     //lightingShader.use();
+
+    // Killer Hasina Song!
+    ISound *killerSong = SoundEngine->play2D("killer_hasina.mp3", true);
+    //killerSong->setIsPaused(true);
 
     // render loop
     // -----------
