@@ -51,6 +51,13 @@ float scale_X = 1.0;
 float scale_Y = 1.0;
 float scale_Z = 1.0;
 
+bool shoot = false;
+float bz = 0.01f;
+
+float blt_z = 0.0f;
+float head_z = 0.0f;
+bool draw = true;
+
 // camera
 Camera camera(glm::vec3(1.0f, 1.5f, 15.0f));
 float lastX = SCR_WIDTH / 2.0f;
@@ -410,6 +417,48 @@ int main()
     }
     stbi_image_free(data);
 
+    GLuint sky_texture;
+    glGenTextures(1, &sky_texture);
+    glBindTexture(GL_TEXTURE_2D, sky_texture);
+    // Set texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // Set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Load image, create texture, and generate mipmaps
+    //int width, height, nrChannels;
+    data = stbi_load("sky.jpg", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cerr << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+
+
+    GLuint screen_texture;
+    glGenTextures(1, &screen_texture);
+    glBindTexture(GL_TEXTURE_2D, screen_texture);
+    // Set texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // Set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Load image, create texture, and generate mipmaps
+    //int width, height, nrChannels;
+    data = stbi_load("GAME.jpg", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cerr << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
 
     // second, configure the light's VAO ------------------------------------ Light Cube
     unsigned int lightCubeVAO, lightVBO, lightEBO;
@@ -497,7 +546,7 @@ int main()
     //lightingShader.use();
 
     // Killer Hasina Song!
-    ISound *killerSong = SoundEngine->play2D("killer_hasina.mp3", true);
+    ISound* killerSong = SoundEngine->play2D("killer_hasina.mp3", true);
     //killerSong->setIsPaused(true);
 
     float xTranslation = 0.0f;
@@ -580,340 +629,372 @@ int main()
                                                  //r    g     b      values
         drawCube(cubeVAO, lightingShader, model, 0.1f, 0.6f, 1.0f);*/
 
-        // --------------------------------------- Sky -----------------
-        // Blue Cube
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-17.0f, -10.0f, -15.0f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(35.0f, 25.0f, 1.0f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 0.0f, 1.0f);
+        if (draw) {
+            // --------------------------------------- Sky -----------------
+            // Blue Cube
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-17.0f, -10.0f, -15.0f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(35.0f, 25.0f, 1.0f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, sky_texture, 1.0f, 1.0f, 1.0f);
 
 
-        // --------------------------------------- Flag -----------------
-        // Green Cube
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(0.2f, 4.0f, -5.6f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(2.0f, 1.5f, 1.0f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 0.0f, 1.0f, 0.0f);
+            // --------------------------------------- Flag -----------------
+            // Green Cube
+            //translateMatrix = glm::translate(identityMatrix, glm::vec3(0.2f, 4.0f, -5.6f));
+            //scaleMatrix = glm::scale(identityMatrix, glm::vec3(2.0f, 1.5f, 1.0f));
+            //model = translateMatrix * scaleMatrix;
+            ////r    g     b      values
+            //drawCube(cubeVAO, lightingShader, model, 0.0f, 1.0f, 0.0f);
 
-        // Red Circle
-        Sphere sphere1 = Sphere();
-                         //r    g     b      values
-        sphere1.setColor(1.0f, 0.0f, 0.0f);
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.2f, 4.8f, -4.6f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.6f, 0.4f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        sphere1.drawSphere(lightingShader, model);
-
-
-        // --------------------------------------- Road ---------------------------------------------------------------------
-        // Road
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-0.5f, 0.0f, 0.3f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(3.0f, 0.2f, 12.0f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(roadVAO, lightingShader, model, road_texture, 0.5f, 0.5f, 0.5f);
+            //// Red Circle
+            //Sphere sphere1 = Sphere();
+            //                 //r    g     b      values
+            //sphere1.setColor(1.0f, 0.0f, 0.0f);
+            //translateMatrix = glm::translate(identityMatrix, glm::vec3(1.2f, 4.8f, -4.6f));
+            //scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.6f, 0.4f, 0.6f));
+            //model = translateMatrix * scaleMatrix;
+            //sphere1.drawSphere(lightingShader, model);
 
 
-        // Obstacles triangle
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(0.0f, 0.2f, 5.2f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.5f, 0.1f, 0.2f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawTriangle(triangleVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
-
-        // Obstacles triangle
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 0.2f, 4.2f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.5f, 0.1f, 0.2f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawTriangle(triangleVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+            // --------------------------------------- Road ---------------------------------------------------------------------
+            // Road
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-0.5f, 0.0f, 0.3f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(3.0f, 0.2f, 12.0f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(roadVAO, lightingShader, model, road_texture, 0.5f, 0.5f, 0.5f);
 
 
-        // -------------------------------------- Buildings in Right side of road   ---------------------------------------------
-        // Building 1
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, -0.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.7f, 0.0f, 1.0f);
+            // Obstacles triangle
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(0.0f, 0.2f, 5.2f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.5f, 0.1f, 0.2f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawTriangle(triangleVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
 
-        // Building 2
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, -0.0f, 0.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.2f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 0.0f, 1.0f);
-
-        // Building 3
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 1.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.0f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
-
-        // Building 4
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 2.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 0.0f, 1.0f);
-
-        // Building 5
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 3.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.0f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 0.0f);
-
-        // Building 6
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 4.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 0.0f, 1.0f);
-
-        // Building 7
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 5.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.2f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.7f, 0.7f);
-
-        // Building 8
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 6.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
-
-        // Building 9
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 7.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.6f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.2f, 0.7f);
-
-        // Building 10
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 8.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.1f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.4f, 1.3f, 1.8f);
+            // Obstacles triangle
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 0.2f, 4.2f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.5f, 0.1f, 0.2f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawTriangle(triangleVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
 
 
-        // Building 11
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 9.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.8f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.6f, 1.9f, 0.5f);
+            // -------------------------------------- Buildings in Right side of road   ---------------------------------------------
+            // Building 1
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, -0.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.7f, 0.0f, 1.0f);
 
-        // Building 12
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 10.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.6f, 0.8f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+            // Building 2
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, -0.0f, 0.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.2f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 0.0f, 1.0f);
 
-        //   ------------------------------------- Buildings in Left side of Road -----------------------------------------------
-        // Building 1
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, -0.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.6f, 1.9f, 0.5f);
+            // Building 3
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 1.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.0f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
 
-        // Building 2
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 0.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.7f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.2f, 0.7f);
+            // Building 4
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 2.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 0.0f, 1.0f);
 
-        // Building 3
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 1.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.7f, 0.7f);
+            // Building 5
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 3.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.0f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 0.0f);
 
-        // Building 4
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 2.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 1.9f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.4f, 1.3f, 1.8f);
+            // Building 6
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 4.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 0.0f, 1.0f);
 
-        // Building 5
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 3.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+            // Building 7
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 5.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.2f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.7f, 0.7f);
 
-        // Building 6
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 4.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 0.0f, 1.0f);
+            // Building 8
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 6.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
 
-        // Building 7
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 5.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
+            // Building 9
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 7.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.6f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.2f, 0.7f);
 
-        // Building 8
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 6.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+            // Building 10
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 8.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.1f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.4f, 1.3f, 1.8f);
 
-        // Building 9
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 7.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
 
-        // Building 10
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 8.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.5f, 0.8f, 1.9f);
+            // Building 11
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 9.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.8f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.6f, 1.9f, 0.5f);
 
-        // Building 11
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 9.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.8f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+            // Building 12
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(2.5f, 0.0f, 10.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.6f, 0.8f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
 
-        // Building 12
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 10.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.6f, 0.8f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+            //   ------------------------------------- Buildings in Left side of Road -----------------------------------------------
+            // Building 1
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, -0.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.6f, 1.9f, 0.5f);
 
-        // ---------------------------------------- KIller Hasina -----------------------
-        /*if (zTranslation < 8) {
-            zTranslation += 0.003f;
-        }*/
-        if (zTranslation < 8) {
-            zTranslation += movementSpeed; // Z moves forward constantly
+            // Building 2
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 0.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.7f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.2f, 0.7f);
+
+            // Building 3
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 1.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.7f, 0.7f);
+
+            // Building 4
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 2.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 1.9f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.4f, 1.3f, 1.8f);
+
+            // Building 5
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 3.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+
+            // Building 6
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 4.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 0.0f, 1.0f);
+
+            // Building 7
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 5.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
+
+            // Building 8
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 6.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+
+            // Building 9
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 7.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.3f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 0.0f, 1.0f, 1.0f);
+
+            // Building 10
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 8.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.5f, 0.6f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.5f, 0.8f, 1.9f);
+
+            // Building 11
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 9.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.4f, 0.8f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+
+            // Building 12
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(-1.3f, 0.0f, 10.5f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 2.6f, 0.8f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, texture, 1.0f, 1.0f, 1.0f);
+
+            // ---------------------------------------- KIller Hasina -----------------------
+            /*if (zTranslation < 8) {
+                zTranslation += 0.003f;
+            }*/
+            if (zTranslation < 8) {
+                zTranslation += movementSpeed; // Z moves forward constantly
+            }
+
+
+            // Update X-axis translation
+            if (moveRight) {
+                xTranslation += movementSpeed;
+                if (xTranslation > 0.5f) { // Adjust the threshold as needed
+                    moveRight = false;
+                }
+            }
+            else {
+                xTranslation -= movementSpeed;
+                if (xTranslation < -0.5f) { // Adjust the threshold as needed
+                    moveRight = true;
+                }
+            }
+
+            // Update Y-axis translation
+            if (moveUp) {
+                yTranslation += movementSpeed;
+                if (yTranslation > 0.5f) { // Adjust the threshold as needed
+                    moveUp = false;
+                }
+            }
+            else {
+                yTranslation -= movementSpeed;
+                if (yTranslation < 0.2f) { // Adjust the threshold as needed
+                    moveUp = true;
+                }
+            }
+
+            // 1. Head
+            /*translateMatrix = glm::translate(identityMatrix, glm::vec3(0.7f, 1.0f, 0.5f+zTranslation));*/
+            head_z = 0.5f + zTranslation;
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(0.7f + xTranslation, 1.0f + yTranslation, head_z));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCubeTexture(cubeVAO, lightingShader, model, hasina_texture, 1.0f, 1.0f, 1.0f);
+
+            // 2. Neck
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(0.875f + xTranslation, 0.8f + yTranslation, 0.5f + zTranslation));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.15f, 0.2f, 0.5f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
+
+            // 3. Body
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(0.55f + xTranslation, 0.4f + yTranslation, 0.5f + zTranslation));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 0.5f, 0.51f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
+
+            // 4. Left Hand
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(0.1f + xTranslation, 0.7f + yTranslation, 0.5f + zTranslation));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 0.05f, 0.5f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 01.0f, 01.0f);
+
+            // 5. Right Hand
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f + xTranslation, 0.7f + yTranslation, 0.5f + zTranslation));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 0.05f, 0.5f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 01.0f, 01.0f);
+
+            // 6. left Leg
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(0.7f + xTranslation, 0.0f + yTranslation, 0.5f + zTranslation));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.15f, 0.5f, 0.5f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+
+            // 7. Right Leg
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f + xTranslation, 0.0f + yTranslation, 0.5f + zTranslation));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.15f, 0.5f, 0.5f));
+            model = translateMatrix * scaleMatrix;
+            //r    g     b      values
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+
+
+            // ----------------------------------------- Gun ---------------------------------------------------------------
+            // Body (Pipe)
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 1.5f, 10.6f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.08f, 0.05f, 1.5f));
+            model = translateMatrix * scaleMatrix;
+            drawCube(cubeVAO, lightingShader, model, 0.1f, 0.6f, 1.0f);
+
+            // Handle
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 1.35f, 12.0f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.08f, 0.21f, 0.10f));
+            model = translateMatrix * scaleMatrix;
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
+
+            // Switch
+            translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 1.45f, 11.8f));
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.08f, 0.05f, 0.3f));
+            model = translateMatrix * scaleMatrix;
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+
+            if (bz < 8) {
+                bz += 0.03f;
+            }
+            else {
+                shoot = false;
+                bz = 0;
+            }
+
+
+            // Bullet
+            if (!shoot) {
+                translateMatrix = glm::translate(identityMatrix, glm::vec3(1.01f, 1.51f, 10.5f));
+            }
+            else {
+                blt_z = 10.5f - bz;
+                translateMatrix = glm::translate(identityMatrix, glm::vec3(1.01f, 1.51f, blt_z));
+            }
+            scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.035f, 0.02f, 0.15f));
+            model = translateMatrix * scaleMatrix;
+            drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
+
         }
-       
 
-        // Update X-axis translation
-        if (moveRight) {
-            xTranslation += movementSpeed;
-            if (xTranslation > 0.5f) { // Adjust the threshold as needed
-                moveRight = false;
+        if (shoot) {
+            if (head_z <= blt_z && blt_z <= (head_z + 0.13)) {
+                translateMatrix = glm::translate(identityMatrix, glm::vec3(-16.875f, -10.8f, 5.0f));
+                scaleMatrix = glm::scale(identityMatrix, glm::vec3(30.15f, 30.2f, 1.5f));
+                model = translateMatrix * scaleMatrix;
+                //r    g     b      values
+                drawCubeTexture(cubeVAO, lightingShader, model, screen_texture, 1.0f, 1.0f, 1.0f);
+                draw = false;
+                //killerSong->setIsPaused(true);
+                std::printf("Stop\n");
             }
         }
-        else {
-            xTranslation -= movementSpeed;
-            if (xTranslation < -0.5f) { // Adjust the threshold as needed
-                moveRight = true;
-            }
-        }
-
-        // Update Y-axis translation
-        if (moveUp) {
-            yTranslation += movementSpeed;
-            if (yTranslation > 0.5f) { // Adjust the threshold as needed
-                moveUp = false;
-            }
-        }
-        else {
-            yTranslation -= movementSpeed;
-            if (yTranslation < 0.2f) { // Adjust the threshold as needed
-                moveUp = true;
-            }
-        }
-        
-        // 1. Head
-        /*translateMatrix = glm::translate(identityMatrix, glm::vec3(0.7f, 1.0f, 0.5f+zTranslation));*/
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(0.7f + xTranslation, 1.0f + yTranslation, 0.5f + zTranslation));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCubeTexture(cubeVAO, lightingShader, model, hasina_texture, 1.0f, 1.0f, 1.0f);
-
-        // 2. Neck
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(0.875f + xTranslation, 0.8f + yTranslation, 0.5f + zTranslation));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.15f, 0.2f, 0.5f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
-
-        // 3. Body
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(0.55f + xTranslation, 0.4f + yTranslation, 0.5f + zTranslation));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 0.5f, 0.5f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
-
-        // 4. Left Hand
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(0.1f + xTranslation, 0.7f + yTranslation, 0.5f + zTranslation));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 0.05f, 0.5f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
-
-        // 5. Right Hand
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f + xTranslation, 0.7f + yTranslation, 0.5f + zTranslation));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.8f, 0.05f, 0.5f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
-
-        // 6. left Leg
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(0.7f + xTranslation, 0.0f + yTranslation, 0.5f + zTranslation));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.15f, 0.5f, 0.5f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
-
-        // 7. Right Leg
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f + xTranslation, 0.0f + yTranslation, 0.5f + zTranslation));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.15f, 0.5f, 0.5f));
-        model = translateMatrix * scaleMatrix;
-        //r    g     b      values
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f);
-
-
-        // ----------------------------------------- Gun ---------------------------------------------------------------
-        // Body (Pipe)
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 1.5f, 10.6f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.05f, 0.05f, 1.5f)); 
-        model = translateMatrix * scaleMatrix;
-        drawCube(cubeVAO, lightingShader, model, 0.1f, 0.6f, 1.0f); 
-
-        // Handle
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 1.35f, 12.0f)); 
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.05f, 0.21f, 0.10f)); 
-        model = translateMatrix * scaleMatrix;
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 0.0f, 0.0f); 
-
-        // Switch
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.0f, 1.45f, 11.8f)); 
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.05f, 0.05f, 0.3f)); 
-        model = translateMatrix * scaleMatrix;
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f); 
-
-        // Bullet
-        translateMatrix = glm::translate(identityMatrix, glm::vec3(1.01f, 1.51f, 10.5f));
-        scaleMatrix = glm::scale(identityMatrix, glm::vec3(0.035f, 0.02f, 0.15f));
-        model = translateMatrix * scaleMatrix;
-        drawCube(cubeVAO, lightingShader, model, 1.0f, 1.0f, 1.0f);
 
 
 
@@ -1024,6 +1105,11 @@ void processInput(GLFWwindow* window)
     }
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         camera.ProcessKeyboard(DOWN, deltaTime);
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        if (!shoot) {
+            shoot = true;
+        }
     }
 
 }
