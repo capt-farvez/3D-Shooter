@@ -68,18 +68,21 @@
     width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.5);
     pointer-events: none;
   }
-  @media (hover: none) and (pointer: coarse) {
-    #shootBtn, #joystick { display: flex; }
-    #hud { display: none !important; }
-  }
+  .touch-device #shootBtn, .touch-device #joystick { display: flex; }
+  .touch-device #hud { display: none !important; }
+  .touch-device #crosshair { display: block !important; }
+  .touch-device .desktop-hint { display: none; }
+  .touch-device .mobile-hint { display: block !important; }
 </style>
 </head>
 <body>
+<script>if('ontouchstart' in window) document.body.classList.add('touch-device');</script>
 
 <div id="startScreen">
   <h1>3D Shooter</h1>
-  <p>WASD - Move | Mouse - Look | Space - Shoot</p>
-  <p>0 - Toggle Directional Light | 1 - Toggle Point Lights</p>
+  <p class="desktop-hint">WASD - Move | Mouse - Look | Space - Shoot</p>
+  <p class="desktop-hint">0 - Toggle Directional Light | 1 - Toggle Point Lights</p>
+  <p class="mobile-hint" style="display:none;">Joystick - Move | Drag - Look | FIRE button - Shoot</p>
   <button id="startBtn">Click to Play</button>
 </div>
 
