@@ -46,6 +46,32 @@
     margin-top: 30px; padding: 14px 40px; font-size: 18px; font-weight: bold;
     background: #10b981; color: #000; border: none; border-radius: 8px; cursor: pointer;
   }
+  /* Mobile touch controls */
+  #mobileControls {
+    display: none; position: fixed; z-index: 20; pointer-events: none;
+  }
+  #shootBtn {
+    position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px;
+    border-radius: 50%; background: rgba(239,68,68,0.7); border: 3px solid rgba(255,255,255,0.4);
+    color: #fff; font-size: 12px; font-weight: bold; font-family: system-ui, sans-serif;
+    display: none; align-items: center; justify-content: center; z-index: 20;
+    pointer-events: auto; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  #shootBtn:active { background: rgba(239,68,68,1); transform: scale(0.9); }
+  #joystick {
+    position: fixed; bottom: 30px; left: 30px; width: 120px; height: 120px;
+    border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3);
+    display: none; z-index: 20; pointer-events: auto; touch-action: none;
+  }
+  #joystickKnob {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.5);
+    pointer-events: none;
+  }
+  @media (hover: none) and (pointer: coarse) {
+    #shootBtn, #joystick { display: flex; }
+    #hud { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -65,6 +91,10 @@
 
 <div id="crosshair" style="display:none;"></div>
 <div id="hud" style="display:none;">SPACE to shoot</div>
+
+<!-- Mobile controls -->
+<button id="shootBtn">FIRE</button>
+<div id="joystick"><div id="joystickKnob"></div></div>
 
 <script type="importmap">
 {
@@ -376,6 +406,97 @@ document.addEventListener('mousemove', e => {
   pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch));
 });
 
+// --- Mobile touch: look (drag on right half of screen) ---
+const isMobile = 'ontouchstart' in window;
+let lookTouchId = null;
+let lastTouchX = 0, lastTouchY = 0;
+
+document.addEventListener('touchstart', e => {
+  if (!gameStarted || gameOver) return;
+  for (const t of e.changedTouches) {
+    // Only track touch on right half (left half is joystick area)
+    if (t.clientX > window.innerWidth * 0.35 && lookTouchId === null) {
+      // Ignore if touching shoot button
+      if (t.target.id === 'shootBtn') continue;
+      lookTouchId = t.identifier;
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+    }
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!gameStarted || gameOver) return;
+  for (const t of e.changedTouches) {
+    if (t.identifier === lookTouchId) {
+      const dx = t.clientX - lastTouchX;
+      const dy = t.clientY - lastTouchY;
+      yaw += dx * 0.004;
+      pitch -= dy * 0.004;
+      pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch));
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+    }
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === lookTouchId) lookTouchId = null;
+  }
+}, { passive: true });
+
+// --- Mobile touch: joystick (move) ---
+const joystick = document.getElementById('joystick');
+const joystickKnob = document.getElementById('joystickKnob');
+let joystickTouchId = null;
+let joystickDX = 0, joystickDY = 0;
+
+joystick.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  joystickTouchId = t.identifier;
+}, { passive: false });
+
+joystick.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joystickTouchId) {
+      const rect = joystick.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let dx = t.clientX - cx;
+      let dy = t.clientY - cy;
+      const maxDist = rect.width / 2;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > maxDist) { dx *= maxDist / dist; dy *= maxDist / dist; }
+      joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      joystickDX = dx / maxDist; // -1 to 1
+      joystickDY = dy / maxDist;
+    }
+  }
+}, { passive: false });
+
+joystick.addEventListener('touchend', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === joystickTouchId) {
+      joystickTouchId = null;
+      joystickDX = 0;
+      joystickDY = 0;
+      joystickKnob.style.transform = 'translate(-50%, -50%)';
+    }
+  }
+}, { passive: true });
+
+// --- Mobile touch: shoot button ---
+document.getElementById('shootBtn').addEventListener('touchstart', e => {
+  e.preventDefault();
+  keys['Space'] = true;
+}, { passive: false });
+document.getElementById('shootBtn').addEventListener('touchend', e => {
+  keys['Space'] = false;
+}, { passive: true });
+
 // --- Start / Restart ---
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', () => location.reload());
@@ -384,14 +505,14 @@ function startGame() {
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('crosshair').style.display = 'block';
   document.getElementById('hud').style.display = 'block';
-  renderer.domElement.requestPointerLock();
+  if (!isMobile) renderer.domElement.requestPointerLock();
   initAudio();
   gameStarted = true;
   animate();
 }
 
 renderer.domElement.addEventListener('click', () => {
-  if (gameStarted && !gameOver) renderer.domElement.requestPointerLock();
+  if (gameStarted && !gameOver && !isMobile) renderer.domElement.requestPointerLock();
 });
 
 // --- Animation loop ---
@@ -413,7 +534,7 @@ function animate() {
 
     camera.lookAt(camera.position.clone().add(front));
 
-    // Camera movement
+    // Camera movement (keyboard + joystick)
     const right = new THREE.Vector3().crossVectors(front, new THREE.Vector3(0, 1, 0)).normalize();
     if (keys['KeyW']) camera.position.addScaledVector(front, moveSpeed * dt);
     if (keys['KeyS']) camera.position.addScaledVector(front, -moveSpeed * dt);
@@ -421,6 +542,9 @@ function animate() {
     if (keys['KeyD']) camera.position.addScaledVector(right, moveSpeed * dt);
     if (keys['KeyE']) camera.position.y += moveSpeed * dt;
     if (keys['KeyR']) camera.position.y -= moveSpeed * dt;
+    // Mobile joystick
+    if (joystickDY !== 0) camera.position.addScaledVector(front, -joystickDY * moveSpeed * dt);
+    if (joystickDX !== 0) camera.position.addScaledVector(right, joystickDX * moveSpeed * dt);
 
     // Shoot
     if (keys['Space'] && !shoot) {
