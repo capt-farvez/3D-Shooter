@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Shooter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; background: #000; }
+  canvas { display: block; }
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 20px; height: 20px; pointer-events: none; z-index: 10;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: rgba(255,255,255,0.7);
+  }
+  #crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+  #crosshair::after { height: 2px; width: 100%; top: 50%; transform: translateY(-50%); }
+  #hud {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-family: monospace; font-size: 14px;
+    background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px;
+    z-index: 10; text-align: center;
+  }
+  #startScreen {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; color: #fff; font-family: system-ui, sans-serif;
+  }
+  #startScreen h1 { font-size: 48px; margin-bottom: 20px; }
+  #startScreen p { font-size: 16px; color: #aaa; margin: 4px 0; }
+  #startScreen button {
+    margin-top: 30px; padding: 14px 40px; font-size: 18px; font-weight: bold;
+    background: #10b981; color: #000; border: none; border-radius: 8px; cursor: pointer;
+  }
+  #startScreen button:hover { background: #34d399; }
+  #gameOverScreen {
+    position: fixed; inset: 0; display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; color: #fff; font-family: system-ui, sans-serif;
+  }
+  #gameOverScreen h1 { font-size: 64px; color: #10b981; }
+  #gameOverScreen p { font-size: 20px; color: #aaa; margin-top: 10px; }
+  #gameOverScreen button {
+    margin-top: 30px; padding: 14px 40px; font-size: 18px; font-weight: bold;
+    background: #10b981; color: #000; border: none; border-radius: 8px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>3D Shooter</h1>
+  <p>WASD - Move | Mouse - Look | Space - Shoot</p>
+  <p>0 - Toggle Directional Light | 1 - Toggle Point Lights</p>
+  <button id="startBtn">Click to Play</button>
+</div>
+
+<div id="gameOverScreen">
+  <h1>TARGET DOWN!</h1>
+  <p>You hit the target!</p>
+  <button id="restartBtn">Play Again</button>
+</div>
+
+<div id="crosshair" style="display:none;"></div>
+<div id="hud" style="display:none;">SPACE to shoot</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// --- State ---
+let gameStarted = false;
+let gameOver = false;
+let shoot = false;
+let bulletZ = 0;
+let bulletProgress = 0;
+const bulletSpeed = 15;
+
+// Enemy state
+let enemyZ = 0;
+let enemyX = 0;
+let enemyY = 0;
+let moveRight = true;
+let moveUp = true;
+const enemySpeed = 0.4;
+
+// Camera movement
+const keys = {};
+const moveSpeed = 5.0;
+let yaw = -Math.PI / 2;
+let pitch = 0;
+const mouseSensitivity = 0.002;
+
+// Lighting toggles
+let directionalLightOn = false;
+let pointLightsOn = true;
+
+// --- Scene setup ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(1.0, 1.5, 15.0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// --- Texture loader ---
+const loader = new THREE.TextureLoader();
+const basePath = window.location.href.replace(/\/[^/]*$/, '/');
+const wallTex = loader.load(basePath + 'res_wall_01_color.jpg');
+const roadTex = loader.load(basePath + 'road.jpeg');
+const skyTex = loader.load(basePath + 'sky.jpg');
+const hasinaTex = loader.load(basePath + 'hasina.jpeg');
+const gameOverTex = loader.load(basePath + 'GAME.jpg');
+
+wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
+
+// --- Audio ---
+let audioCtx, bgMusic;
+function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  fetch(basePath + 'killer_hasina.mp3')
+    .then(r => r.arrayBuffer())
+    .then(buf => audioCtx.decodeAudioData(buf))
+    .then(decoded => {
+      bgMusic = audioCtx.createBufferSource();
+      bgMusic.buffer = decoded;
+      bgMusic.loop = true;
+      bgMusic.connect(audioCtx.destination);
+      bgMusic.start(0);
+    }).catch(() => {});
+}
+
+// --- Lighting ---
+// Ambient
+const ambientLight = new THREE.AmbientLight(0x222222);
+scene.add(ambientLight);
+
+// Directional light (off by default)
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+dirLight.position.set(1, 1, 1);
+dirLight.visible = false;
+scene.add(dirLight);
+
+// Point lights
+const pointLightData = [
+  [-1.0, 2.0, 12.0],
+  [2.5, 2.0, 12.0],
+  [-1.5, 3.0, 0.0],
+  [2.5, 3.0, 0.0],
+  [-0.5, 3.0, 6.0],
+  [1.5, 3.0, 6.0]
+];
+const pointLights = [];
+const lightBulbs = [];
+
+pointLightData.forEach(pos => {
+  const pl = new THREE.PointLight(0xffffff, 1.5, 20);
+  pl.position.set(pos[0], pos[1], pos[2]);
+  scene.add(pl);
+  pointLights.push(pl);
+
+  // Light bulb visual
+  const bulbGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+  const bulbMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+  const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+  bulb.position.set(pos[0], pos[1], pos[2]);
+  scene.add(bulb);
+  lightBulbs.push(bulb);
+});
+
+// --- Helper: create a box mesh ---
+function makeBox(w, h, d, color, texture, px, py, pz) {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  let mat;
+  if (texture) {
+    mat = new THREE.MeshPhongMaterial({ map: texture, color: new THREE.Color(color) });
+  } else {
+    mat = new THREE.MeshPhongMaterial({ color: new THREE.Color(color) });
+  }
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(px + w/2, py + h/2, pz + d/2);
+  scene.add(mesh);
+  return mesh;
+}
+
+// --- Sky backdrop ---
+makeBox(35, 25, 0.1, 0xffffff, skyTex, -17, -10, -15);
+
+// --- Road ---
+const roadMat = new THREE.MeshPhongMaterial({ map: roadTex, color: 0x808080 });
+const roadGeo = new THREE.BoxGeometry(3.0, 0.2, 12.0);
+const road = new THREE.Mesh(roadGeo, roadMat);
+road.position.set(-0.5 + 1.5, 0.1, 0.3 + 6.0);
+scene.add(road);
+
+// --- Obstacle triangles ---
+function makeTriangle(px, py, pz, sx, sy, sz, color) {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(1, 0);
+  shape.lineTo(0.5, 1);
+  shape.closePath();
+  const extSettings = { depth: 1, bevelEnabled: false };
+  const geo = new THREE.ExtrudeGeometry(shape, extSettings);
+  const mat = new THREE.MeshPhongMaterial({ color });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.scale.set(sx, sy, sz);
+  mesh.position.set(px, py, pz);
+  scene.add(mesh);
+  return mesh;
+}
+makeTriangle(0.0, 0.2, 5.2, 0.5, 0.1, 0.2, 0xff0000);
+makeTriangle(1.0, 0.2, 4.2, 0.5, 0.1, 0.2, 0xffffff);
+
+// --- Buildings ---
+const buildingDefs = [
+  // Right side (x=2.5)
+  [2.5, 0, -0.5, 0.8, 2.5, 0.6], [2.5, 0, 0.5, 0.8, 2.2, 0.6],
+  [2.5, 0, 1.5, 0.8, 2.0, 0.6], [2.5, 0, 2.5, 0.8, 2.3, 0.6],
+  [2.5, 0, 3.5, 0.8, 2.0, 0.6], [2.5, 0, 4.5, 0.8, 2.5, 0.6],
+  [2.5, 0, 5.5, 0.8, 2.2, 0.6], [2.5, 0, 6.5, 0.8, 2.4, 0.6],
+  [2.5, 0, 7.5, 0.8, 2.6, 0.6], [2.5, 0, 8.5, 0.8, 2.1, 0.6],
+  [2.5, 0, 9.5, 0.8, 2.5, 0.8], [2.5, 0, 10.5, 0.8, 2.6, 0.8],
+  // Left side (x=-1.3)
+  [-1.3, 0, -0.5, 0.8, 2.5, 0.6], [-1.3, 0, 0.5, 0.8, 2.7, 0.6],
+  [-1.3, 0, 1.5, 0.8, 2.5, 0.6], [-1.3, 0, 2.5, 0.8, 1.9, 0.6],
+  [-1.3, 0, 3.5, 0.8, 2.3, 0.6], [-1.3, 0, 4.5, 0.8, 2.4, 0.6],
+  [-1.3, 0, 5.5, 0.8, 2.3, 0.6], [-1.3, 0, 6.5, 0.8, 2.4, 0.6],
+  [-1.3, 0, 7.5, 0.8, 2.3, 0.6], [-1.3, 0, 8.5, 0.8, 2.5, 0.6],
+  [-1.3, 0, 9.5, 0.8, 2.4, 0.8], [-1.3, 0, 10.5, 0.8, 2.6, 0.8],
+];
+
+// Building tint colors from the original code
+const buildingColors = [
+  0xb300ff, 0x0000ff, 0x00ffff, 0xff00ff, 0x00ff00, 0x0000ff,
+  0x00ffb3, 0xffffff, 0x00ffb3, 0x66ffff, 0x99ff80, 0xffffff,
+  0x99ff80, 0x00ffb3, 0x00ffb3, 0x66ffff, 0xffffff, 0xff00ff,
+  0x00ffff, 0xffffff, 0x00ffff, 0xffccff, 0xffffff, 0xffffff,
+];
+
+buildingDefs.forEach((b, i) => {
+  makeBox(b[3], b[4], b[5], buildingColors[i] || 0xffffff, wallTex, b[0], b[1], b[2]);
+});
+
+// --- Enemy character (group of cubes) ---
+const enemyGroup = new THREE.Group();
+scene.add(enemyGroup);
+
+// Head (with texture)
+const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+const headMat = new THREE.MeshPhongMaterial({ map: hasinaTex });
+const head = new THREE.Mesh(headGeo, headMat);
+head.position.set(0.95, 1.25, 0.75);
+enemyGroup.add(head);
+
+// Neck
+const neckGeo = new THREE.BoxGeometry(0.15, 0.2, 0.5);
+const neckMat = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const neck = new THREE.Mesh(neckGeo, neckMat);
+neck.position.set(0.95, 0.9, 0.75);
+enemyGroup.add(neck);
+
+// Body
+const bodyGeo = new THREE.BoxGeometry(0.8, 0.5, 0.51);
+const bodyMat = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const body = new THREE.Mesh(bodyGeo, bodyMat);
+body.position.set(0.95, 0.65, 0.755);
+enemyGroup.add(body);
+
+// Left Hand
+const lhGeo = new THREE.BoxGeometry(0.8, 0.05, 0.5);
+const lhMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+const lh = new THREE.Mesh(lhGeo, lhMat);
+lh.position.set(0.5, 0.725, 0.75);
+enemyGroup.add(lh);
+
+// Right Hand
+const rh = new THREE.Mesh(lhGeo.clone(), lhMat.clone());
+rh.position.set(1.4, 0.725, 0.75);
+enemyGroup.add(rh);
+
+// Left Leg
+const legGeo = new THREE.BoxGeometry(0.15, 0.5, 0.5);
+const legMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+const ll = new THREE.Mesh(legGeo, legMat);
+ll.position.set(0.775, 0.25, 0.75);
+enemyGroup.add(ll);
+
+// Right Leg
+const rl = new THREE.Mesh(legGeo.clone(), legMat.clone());
+rl.position.set(1.075, 0.25, 0.75);
+enemyGroup.add(rl);
+
+// --- Gun (fixed in view - we'll position relative to camera) ---
+const gunGroup = new THREE.Group();
+
+// Pipe
+const pipeGeo = new THREE.BoxGeometry(0.08, 0.05, 1.5);
+const pipeMat = new THREE.MeshPhongMaterial({ color: 0x1a99ff });
+const pipe = new THREE.Mesh(pipeGeo, pipeMat);
+pipe.position.set(0, 0, -0.75);
+gunGroup.add(pipe);
+
+// Handle
+const handleGeo = new THREE.BoxGeometry(0.08, 0.21, 0.10);
+const handleMat = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const handle = new THREE.Mesh(handleGeo, handleMat);
+handle.position.set(0, -0.105, 0.0);
+gunGroup.add(handle);
+
+// Switch
+const switchGeo = new THREE.BoxGeometry(0.08, 0.05, 0.3);
+const switchMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+const switchMesh = new THREE.Mesh(switchGeo, switchMat);
+switchMesh.position.set(0, -0.05, -0.1);
+gunGroup.add(switchMesh);
+
+camera.add(gunGroup);
+gunGroup.position.set(0.3, -0.2, -1.5);
+scene.add(camera);
+
+// --- Bullet ---
+const bulletGeo = new THREE.BoxGeometry(0.035, 0.02, 0.15);
+const bulletMat = new THREE.MeshPhongMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 0.5 });
+const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+bullet.visible = false;
+scene.add(bullet);
+
+// Bullet start position (in world space)
+let bulletStartPos = new THREE.Vector3();
+let bulletDir = new THREE.Vector3();
+
+// --- Game over overlay (hidden) ---
+const goGeo = new THREE.PlaneGeometry(30, 30);
+const goMat = new THREE.MeshBasicMaterial({ map: gameOverTex, transparent: true, opacity: 0 });
+const goPlane = new THREE.Mesh(goGeo, goMat);
+goPlane.visible = false;
+scene.add(goPlane);
+
+// --- Input ---
+document.addEventListener('keydown', e => { keys[e.code] = true; handleKeyToggle(e); });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function handleKeyToggle(e) {
+  if (!gameStarted || gameOver) return;
+  if (e.code === 'Digit0') {
+    directionalLightOn = !directionalLightOn;
+    dirLight.visible = directionalLightOn;
+  }
+  if (e.code === 'Digit1') {
+    pointLightsOn = !pointLightsOn;
+    pointLights.forEach(pl => pl.visible = pointLightsOn);
+    lightBulbs.forEach(b => b.material.color.setHex(pointLightsOn ? 0xcccccc : 0x404040));
+  }
+}
+
+document.addEventListener('mousemove', e => {
+  if (!gameStarted || gameOver) return;
+  yaw += e.movementX * mouseSensitivity;
+  pitch -= e.movementY * mouseSensitivity;
+  pitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, pitch));
+});
+
+// --- Start / Restart ---
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('crosshair').style.display = 'block';
+  document.getElementById('hud').style.display = 'block';
+  renderer.domElement.requestPointerLock();
+  initAudio();
+  gameStarted = true;
+  animate();
+}
+
+renderer.domElement.addEventListener('click', () => {
+  if (gameStarted && !gameOver) renderer.domElement.requestPointerLock();
+});
+
+// --- Animation loop ---
+const clock = new THREE.Clock();
+
+function animate() {
+  if (!gameStarted) return;
+  requestAnimationFrame(animate);
+
+  const dt = clock.getDelta();
+
+  if (!gameOver) {
+    // Camera rotation
+    const front = new THREE.Vector3(
+      Math.cos(pitch) * Math.cos(yaw),
+      Math.sin(pitch),
+      Math.cos(pitch) * Math.sin(yaw)
+    ).normalize();
+
+    camera.lookAt(camera.position.clone().add(front));
+
+    // Camera movement
+    const right = new THREE.Vector3().crossVectors(front, new THREE.Vector3(0, 1, 0)).normalize();
+    if (keys['KeyW']) camera.position.addScaledVector(front, moveSpeed * dt);
+    if (keys['KeyS']) camera.position.addScaledVector(front, -moveSpeed * dt);
+    if (keys['KeyA']) camera.position.addScaledVector(right, -moveSpeed * dt);
+    if (keys['KeyD']) camera.position.addScaledVector(right, moveSpeed * dt);
+    if (keys['KeyE']) camera.position.y += moveSpeed * dt;
+    if (keys['KeyR']) camera.position.y -= moveSpeed * dt;
+
+    // Shoot
+    if (keys['Space'] && !shoot) {
+      shoot = true;
+      bulletProgress = 0;
+      // Get bullet start from gun tip in world space
+      const gunTip = new THREE.Vector3(0, 0, -1.5);
+      gunGroup.localToWorld(gunTip);
+      bulletStartPos.copy(gunTip);
+      bulletDir.copy(front).normalize();
+      bullet.visible = true;
+    }
+
+    // Update bullet
+    if (shoot) {
+      bulletProgress += bulletSpeed * dt;
+      bullet.position.copy(bulletStartPos).addScaledVector(bulletDir, bulletProgress);
+      bullet.lookAt(bullet.position.clone().add(bulletDir));
+
+      // Check collision with enemy head
+      const headWorldPos = new THREE.Vector3();
+      head.getWorldPosition(headWorldPos);
+      if (bullet.position.distanceTo(headWorldPos) < 0.5) {
+        triggerGameOver();
+      }
+
+      // Reset bullet after traveling too far
+      if (bulletProgress > 30) {
+        shoot = false;
+        bullet.visible = false;
+      }
+    }
+
+    // Enemy movement
+    if (enemyZ < 8) {
+      enemyZ += enemySpeed * dt;
+    }
+
+    if (moveRight) {
+      enemyX += enemySpeed * dt;
+      if (enemyX > 0.5) moveRight = false;
+    } else {
+      enemyX -= enemySpeed * dt;
+      if (enemyX < -0.5) moveRight = true;
+    }
+
+    if (moveUp) {
+      enemyY += enemySpeed * dt;
+      if (enemyY > 0.5) moveUp = false;
+    } else {
+      enemyY -= enemySpeed * dt;
+      if (enemyY < 0.2) moveUp = true;
+    }
+
+    enemyGroup.position.set(enemyX, enemyY, enemyZ);
+  }
+
+  renderer.render(scene, camera);
+}
+
+function triggerGameOver() {
+  gameOver = true;
+  shoot = false;
+  bullet.visible = false;
+  enemyGroup.visible = false;
+
+  document.getElementById('crosshair').style.display = 'none';
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('gameOverScreen').style.display = 'flex';
+  document.exitPointerLock();
+
+  if (bgMusic) {
+    bgMusic.stop();
+  }
+}
+
+// --- Resize ---
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
